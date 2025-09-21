@@ -4,11 +4,11 @@ setwd("C:/Users/aaisu/Box/Carter Lab/Projects/RNAseq_EthiopiaNUCI/Approach_II_ou
 # Importing libraries
 library(tidyverse)
 
-# Creating a list to hold paths to each directory
+# Creating a list to hold paths to each directory containing CSV files of KEGGS, GO enrichment and GSEA results with unfiltered significant genes
 directory_paths <- list()
-directory_paths[["GO_enrichment"]] <- "C:/Users/aaisu/Box/Carter Lab/Projects/RNAseq_EthiopiaNUCI/Approach_II_outputs/GOenrichment/unfiltered_results"
-directory_paths[["KEGGS"]] <- "C:/Users/aaisu/Box/Carter Lab/Projects/RNAseq_EthiopiaNUCI/Approach_II_outputs/KEGGS/unfiltered_results"
-directory_paths[["GSEA"]] <- "C:/Users/aaisu/Box/Carter Lab/Projects/RNAseq_EthiopiaNUCI/Approach_II_outputs/GSEA/All_samples/Dataframes"
+directory_paths[["GO_enrichment"]] <- "../GOenrichment/unfiltered_results"
+directory_paths[["KEGGS"]] <- "../KEGGS/unfiltered_results"
+directory_paths[["GSEA"]] <- "../GSEA/All_samples/Dataframes"
 
 # Making a list to hold all unfiltered pathway and GO term data
 all_data_nested <- list()
@@ -137,7 +137,102 @@ for (analysis_name in names(all_data_nested)){
   }
 }
 
+#######################################################################################
+### --- Comparing Pathway level filtered output with gene level filtered output --- ###
 
+
+# Creating a list to hold paths to each directory containing CSV files 
+# of KEGGS, GO enrichment and GSEA results generated with significant genes without filtering larval stage related genes
+glf_directory_paths <- list()
+glf_directory_paths[["GO_enrichment"]] <- "../GOenrichment/directional_filtered_results"
+glf_directory_paths[["KEGGS"]] <- "../KEGGS/directional_filtered_results"
+
+# Making a list to hold all unfiltered pathway and GO term data
+glf_data_nested <- list()
+
+# Get the names from your directory_paths list. The loop will iterate through these.
+glf_directory_names <- names(glf_directory_paths)
+
+for (dir_name in glf_directory_names) {
+  # Get the actual file path corresponding to the current name
+  current_path <- glf_directory_paths[[dir_name]]
+  
+  cat(paste("Processing directory:", dir_name, "->", current_path, "\n"))
+  
+  # Find all files ending in .csv within the current directory.
+  # We set `full.names = TRUE` to get the complete path for reading.
+  csv_files <- list.files(path = current_path,
+                          pattern = "\\.csv$",
+                          full.names = TRUE)
+  
+  # Check if any CSV files were found in the directory.
+  if (length(csv_files) == 0) {
+    cat(paste("  -> No CSV files found in this directory. Skipping.\n"))
+    # Use 'next' to skip the rest of the loop and move to the next directory
+    next
+  }
+  
+  # Read each CSV file into a temporary list of data frames.
+  list_of_dataframes <- lapply(csv_files, function(file_path) {
+    
+    # Read the data from the file into a temporary data frame
+    df <- read.csv(file_path)
+    
+    # Check if the 'p.adjust' column exists before trying to filter.
+    # This makes the script robust and prevents errors if a file is missing the column.
+    if ("p.adjust" %in% names(df)) {
+      
+      # Use subset() for a clean and readable filter.
+      # This keeps only the rows where p.adjust is less than or equal to 0.05.
+      # It also correctly handles any potential NA values in the column.
+      df_filtered <- subset(df, p.adjust <= 0.05)
+      
+      # Return the newly filtered data frame
+      return(df_filtered)
+      
+    } else {
+      
+      # If the column doesn't exist, print a warning and return the original, unfiltered data frame.
+      cat(paste("  -> Warning: 'p.adjust' column not found in", basename(file_path), ". Returning original data.\n"))
+      return(df)
+      
+    }
+  })
+  
+  # Name each data frame in our temporary list using its original file name.
+  # `basename()` is a handy function that strips the directory path, leaving just the file name.
+  names(list_of_dataframes) <- basename(csv_files)
+  
+  # Assign the named list of data frames to our main list.
+  # The key for this new entry is the name from your original `directory_paths` list.
+  glf_data_nested[[dir_name]] <- list_of_dataframes
+  
+  cat(paste("  -> Successfully imported", length(list_of_dataframes), "files.\n"))
+}
+
+### --- Getting the list of intersection between gene level filtered pathways and pathway level filtered pathways ---
+
+# Creating a list to hold the intersections
+
+pathway_intersct <- list()
+
+# Iterating over the data frames of the gene level filtered pathway list
+
+for (analysis_name in names(glf_data_nested)){
+  for (df_name in names(glf_data_nested[[analysis_name]])){
+    comparison_ID <- sub("_dir_filtered.csv", "", df_name)
+    # Corresponding plf_df_name
+    plf_df_name <- paste(comparison_ID, "_unfiltered.csv", sep = "")
+    # Getting the intersection
+    shared_IDxs <- filtered_pathways[[analysis_name]][[plf_df_name]]$ID %in% glf_data_nested[[analysis_name]][[df_name]]$ID
+    # Subsetting the data frame and putting data frame in the list
+    pathway_intersct[[analysis_name]][[comparison_ID]] <- filtered_pathways[[analysis_name]][[plf_df_name]][shared_IDxs,]
+    # Saving the data frames
+    if (nrow(pathway_intersct[[analysis_name]][[comparison_ID]] > 0)) {
+      write.csv(pathway_intersct[[analysis_name]][[comparison_ID]], file = paste("./KEGGSnGOE_Intersections/", analysis_name, "/", comparison_ID, ".csv", sep = "")) 
+    }
+  }
+}
 
 
 
