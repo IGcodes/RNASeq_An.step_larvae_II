@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Viewer and Plotter</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1> GO Term enrichment and KEGGS Data Viewer and Plotter 📊</h1>
+        <p> This web application was developed as a part of the publication -- publication name -- by Gunarathna, et al. Please refer the results section of the publication for more details.</p>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="directory-select">Select Analysis Type:</label>
+                <select id="directory-select"></select>
+            </div>
+            <div class="control-group">
+                <label for="file-select">Select File:</label>
+                <select id="file-select">
+                    <option value="">-- Select a type first --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="output-container">
+            <h2>Chart</h2>
+            <div class="chart-container">
+                <canvas id="bar-chart"></canvas>
+            </div>
+
+            <h2>Data Table</h2>
+            <div id="table-container">
+                <p>Select a file to see its data here.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
